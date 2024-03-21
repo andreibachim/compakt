@@ -1,0 +1,11 @@
+[package]
+name = "compakt"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "compakt"
+path = "src/bin.rs"
+
+[dependencies]
+anyhow = "1.0.81"
