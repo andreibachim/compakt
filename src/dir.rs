@@ -1,5 +1,8 @@
 use std::{ffi::OsString, fs};
 
+use anyhow::anyhow;
+use lol_html::{element, html_content::ContentType, rewrite_str, RewriteStrSettings};
+
 use crate::{source_dir::SourceDir, target_dir::TargetDir};
 
 pub struct Dir<'a> {
@@ -35,7 +38,7 @@ impl<'a> Dir<'a> {
                     }
                 }
             });
-
+        println!("{:?}", layout);
         self.process_dirs(dirs, layout)?;
 
         Ok(())
@@ -49,7 +52,7 @@ impl<'a> Dir<'a> {
                 Some(
                     inherited_layout
                         .clone()
-                        .map(|inherited| "hello".to_string())
+                        .map(|inherited| inject_into_layout(&inner, &inherited).unwrap())
                         .unwrap_or(inner),
                 )
             },
@@ -72,4 +75,18 @@ impl<'a> Dir<'a> {
         }
         Ok(())
     }
+}
+
+fn inject_into_layout(content: &str, layout: &str) -> anyhow::Result<String> {
+    rewrite_str(
+        layout,
+        RewriteStrSettings {
+            element_content_handlers: vec![element!("[data-slot]", |el| {
+                el.replace(&content, ContentType::Html);
+                Ok(())
+            })],
+            ..RewriteStrSettings::default()
+        },
+    )
+    .map_err(|err| anyhow!("Could not inject into layount. Underlying error: {}", err))
 }
