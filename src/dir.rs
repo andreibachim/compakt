@@ -80,7 +80,10 @@ impl<'a> Dir<'a> {
 
     fn process_pages(&self, pages: Vec<OsString>, layout: &Option<String>) -> anyhow::Result<()> {
         for page in pages {
-            let path = self.target_directory.get_path().join(&page);
+            let path = self
+                .target_directory
+                .get_path()
+                .join(&page.to_string_lossy().replace("page.", ""));
             let content = fs::read_to_string(self.source_directory.get_path().join(&page))?;
             let content = match layout {
                 Some(layout) => inject_into_layout(&content, layout)?,
