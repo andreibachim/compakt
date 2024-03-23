@@ -40,7 +40,7 @@ impl<'a> Dir<'a> {
                     }
                 }
             });
-        self.merge_layouts(&layout);
+        layout = self.merge_layouts(&layout);
         self.process_pages(pages, &layout)?;
         self.process_dirs(dirs, &layout)?;
 
