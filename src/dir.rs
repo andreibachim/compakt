@@ -1,4 +1,4 @@
-use std::{ffi::OsString, fs};
+use std::{ffi::OsString, fs, io::Write, path::Path};
 
 use anyhow::anyhow;
 use lol_html::{element, html_content::ContentType, rewrite_str, RewriteStrSettings};
@@ -14,7 +14,7 @@ pub struct Dir<'a> {
 impl<'a> Dir<'a> {
     pub fn process(&self) -> anyhow::Result<()> {
         let mut dirs: Vec<OsString> = vec![];
-        let mut pages: Vec<String> = vec![];
+        let mut pages: Vec<OsString> = vec![];
         let mut layout: Option<String> = None;
 
         fs::read_dir(self.source_directory.get_path())?
@@ -30,16 +30,18 @@ impl<'a> Dir<'a> {
                             layout = self.merge_layouts(fs::read_to_string(dir_entry.path()).ok());
                         }
                         s if s.ends_with("page.html") => {
-                            if let Ok(page_content) = fs::read_to_string(dir_entry.path()) {
-                                pages.push(page_content);
-                            }
+                            pages.push(dir_entry.file_name());
                         }
-                        _ => println!("found a normal file!"),
+                        _ => create_file(
+                            &fs::read_to_string(dir_entry.path()).unwrap(),
+                            &self.target_directory.get_path().join(dir_entry.file_name()),
+                        )
+                        .unwrap(),
                     }
                 }
             });
-        println!("{:?}", layout);
-        self.process_dirs(dirs, layout)?;
+        self.process_pages(pages, &layout)?;
+        self.process_dirs(dirs, &layout)?;
 
         Ok(())
     }
@@ -59,7 +61,7 @@ impl<'a> Dir<'a> {
         )
     }
 
-    fn process_dirs(&self, dirs: Vec<OsString>, layout: Option<String>) -> anyhow::Result<()> {
+    fn process_dirs(&self, dirs: Vec<OsString>, layout: &Option<String>) -> anyhow::Result<()> {
         for dir in dirs {
             let source_directory = self.source_directory.get_path().join(&dir);
             let source_directory = SourceDir::new(&source_directory)?;
@@ -75,6 +77,20 @@ impl<'a> Dir<'a> {
         }
         Ok(())
     }
+
+    fn process_pages(&self, pages: Vec<OsString>, layout: &Option<String>) -> anyhow::Result<()> {
+        for page in pages {
+            let path = self.target_directory.get_path().join(&page);
+            let content = fs::read_to_string(self.source_directory.get_path().join(&page))?;
+            let content = match layout {
+                Some(layout) => inject_into_layout(&content, layout)?,
+                None => content,
+            };
+            create_file(&content, &path)?;
+        }
+
+        Ok(())
+    }
 }
 
 fn inject_into_layout(content: &str, layout: &str) -> anyhow::Result<String> {
@@ -82,11 +98,17 @@ fn inject_into_layout(content: &str, layout: &str) -> anyhow::Result<String> {
         layout,
         RewriteStrSettings {
             element_content_handlers: vec![element!("[data-slot]", |el| {
-                el.replace(&content, ContentType::Html);
+                el.replace(content, ContentType::Html);
                 Ok(())
             })],
             ..RewriteStrSettings::default()
         },
     )
     .map_err(|err| anyhow!("Could not inject into layount. Underlying error: {}", err))
+}
+
+fn create_file(content: &str, path: &Path) -> anyhow::Result<()> {
+    let mut file = fs::File::create(path)?;
+    file.write_all(content.as_bytes())?;
+    Ok(())
 }
