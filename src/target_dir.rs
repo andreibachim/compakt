@@ -2,6 +2,7 @@ use std::{fs, path::Path};
 
 use anyhow::{anyhow, Result};
 
+#[derive(Debug)]
 pub struct TargetDir<'a> {
     path: &'a Path,
 }

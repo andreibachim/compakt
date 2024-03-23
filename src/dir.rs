@@ -27,7 +27,7 @@ impl<'a> Dir<'a> {
                 if dir_entry.path().is_file() {
                     match dir_entry.file_name().to_string_lossy() {
                         s if s.ends_with("layout.html") => {
-                            layout = self.merge_layouts(fs::read_to_string(dir_entry.path()).ok());
+                            layout = fs::read_to_string(dir_entry.path()).ok();
                         }
                         s if s.ends_with("page.html") => {
                             pages.push(dir_entry.file_name());
@@ -40,15 +40,16 @@ impl<'a> Dir<'a> {
                     }
                 }
             });
+        self.merge_layouts(&layout);
         self.process_pages(pages, &layout)?;
         self.process_dirs(dirs, &layout)?;
 
         Ok(())
     }
 
-    fn merge_layouts(&self, inner_layout: Option<String>) -> Option<String> {
+    fn merge_layouts(&self, inner_layout: &Option<String>) -> Option<String> {
         let inherited_layout = self.inherited_template.clone();
-        inner_layout.map_or_else(
+        inner_layout.clone().map_or_else(
             || inherited_layout.clone(),
             |inner| {
                 Some(

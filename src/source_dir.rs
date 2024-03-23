@@ -2,6 +2,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, Result};
 
+#[derive(Debug)]
 pub struct SourceDir<'a> {
     path: &'a Path,
 }
