@@ -32,11 +32,17 @@ impl<'a> Dir<'a> {
                         s if s.ends_with("page.html") => {
                             pages.push(dir_entry.file_name());
                         }
-                        _ => create_file(
-                            &fs::read_to_string(dir_entry.path()).unwrap(),
-                            &self.target_directory.get_path().join(dir_entry.file_name()),
-                        )
-                        .unwrap(),
+                        _ => {
+                            fs::copy(
+                                dir_entry.path(),
+                                &self.target_directory.get_path().join(dir_entry.file_name()),
+                            )
+                            .unwrap();
+                        } //     create_file(
+                          //     &fs::read_to_string(dir_entry.path()).unwrap(),
+                          //     &self.target_directory.get_path().join(dir_entry.file_name()),
+                          // )
+                          // .unwrap(),
                     }
                 }
             });
